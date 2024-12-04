@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Game List{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Game List</h1>
+
+    <!-- Навигационные кнопки: корзина, вход, регистрация -->
+    <div class="d-flex justify-content-end mb-4">
+        <a href="{% url 'cart' %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-cart"></i> Cart
+        </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'logout' %}" class="btn btn-outline-danger me-2">
+            Logout
+        </a>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-outline-success me-2">
+            Login
+        </a>
+        <a href="{% url 'register' %}" class="btn btn-outline-info">
+            Register
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Форма фильтрации и поиска -->
+    <form method="get" class="mb-4 row g-3">
+        <div class="col-md-4">
+            <label for="search" class="form-label">Search</label>
+            <input
+                type="text"
+                name="search"
+                id="search"
+                value="{{ request.GET.search }}"
+                class="form-control"
+                placeholder="Enter game title">
+        </div>
+        <!-- Форма фильтрации -->
+        <div class="col-md-4">
+            <label for="min_price" class="form-label">Minimum Price</label>
+            <input
+                type="number"
+                step="0.01"
+                name="min_price"
+                id="min_price"
+                value="{{ request.GET.min_price }}"
+                class="form-control"
+                placeholder="0.00">
+        </div>
+        <div class="col-md-4">
+            <label for="max_price" class="form-label">Maximum Price</label>
+            <input
+                type="number"
+                step="0.01"
+                name="max_price"
+                id="max_price"
+                value="{{ request.GET.max_price }}"
+                class="form-control"
+                placeholder="0.00">
+        </div>
+        <div class="col-md-4">
+        <label for="min_rating">Filter by Minimum Rating:</label>
+        <select name="min_rating" id="min_rating" class="form-control w-auto d-inline-block">
+            <option value="0" {% if min_rating == "0" %}selected{% endif %}>All</option>
+            <option value="1" {% if min_rating == "1" %}selected{% endif %}>1 and above</option>
+            <option value="2" {% if min_rating == "2" %}selected{% endif %}>2 and above</option>
+            <option value="3" {% if min_rating == "3" %}selected{% endif %}>3 and above</option>
+            <option value="4" {% if min_rating == "4" %}selected{% endif %}>4 and above</option>
+            <option value="5" {% if min_rating == "5" %}selected{% endif %}>5 only</option>
+        </select>
+        </div>
+        <div class="col-md-12 text-end">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{% url 'game_list' %}" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+    </form>
+
+    <!-- Список игр -->
+    <div class="row">
+        {% for game in games %}
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ game.title }}</h5>
+                    <img src="{{ game.image.url }}" class="card-img-top" alt="{{ game.title }}" style="  width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 5px;">
+                    <p class="card-text">
+                        <strong>Price:</strong> ${{ game.price }}<br>
+                        {{ game.description|truncatechars:100 }}
+                    </p>
+                    <h5 class="card-title">{{ store.store_name }}</h5>
+                    <p class="card-text">Rating: {{ store.average_rating }} / 5</p>
+                    <p class="card-text">{{ store.description|truncatechars:100 }}</p>
+                    <form method="post" action="{% url 'add_to_cart' game.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100">Add to Cart</button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <p class="text-center">No games found matching your criteria.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

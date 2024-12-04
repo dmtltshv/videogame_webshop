@@ -1,0 +1,15 @@
+<h3>Average Rating: {{ store.average_rating }}</h3>
+<div>
+    {% for review in store.reviews.all %}
+    <div class="card mb-2">
+        <div class="card-body">
+            <h5 class="card-title">Rating: {{ review.rating }} / 5</h5>
+            <p class="card-text">{{ review.comment }}</p>
+            <p class="text-muted">By {{ review.user.username }} on {{ review.created_at|date:"d M Y" }}</p>
+        </div>
+    </div>
+    {% empty %}
+    <p>No reviews yet. Be the first to leave one!</p>
+    {% endfor %}
+</div>
+<a href="{% url 'add_review' store.id %}" class="btn btn-primary mt-3">Leave a Review</a>
