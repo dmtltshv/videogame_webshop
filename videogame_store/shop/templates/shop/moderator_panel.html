@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">Панель управления</h2>
+    <a href="{% url 'add_game' %}" class="btn btn-success mb-3">Добавить игру</a>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Цена</th>
+                <th>Категория</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game in games %}
+            <tr>
+                <td>{{ game.title }}</td>
+                <td>${{ game.price }}</td>
+                <td>{{ game.category }}</td>
+                <td>
+                    <a href="{% url 'edit_game' game.id %}" class="btn btn-warning btn-sm">Редактировать</a>
+                    <a href="{% url 'delete_game' game.id %}" class="btn btn-danger btn-sm">Удалить</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

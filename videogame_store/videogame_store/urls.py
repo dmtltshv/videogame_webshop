@@ -16,6 +16,10 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('profile_edit/', views.profile_edit, name='profile_edit'),
     path('reset-password/', views.reset_password, name='reset_password'),
+    path('moderator-panel/', views.moderator_panel, name='moderator_panel'),
+    path('add-game/', views.add_game, name='add_game'),
+    path('edit-game/<int:game_id>/', views.edit_game, name='edit_game'),
+    path('delete-game/<int:game_id>/', views.delete_game, name='delete_game'),
 
     path('add-to-cart/<int:game_id>/', views.add_to_cart, name='add_to_cart'),
     path('remove-from-cart/<int:cart_item_id>/', views.remove_from_cart, name='remove_from_cart'),

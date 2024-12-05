@@ -7,9 +7,11 @@ from .forms import CustomUserCreationForm as RegistrationForm
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .forms import ProfileUpdateForm, PasswordResetForm
+from .forms import ProfileUpdateForm, PasswordResetForm, GameForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import Group
+from django.contrib.auth.decorators import user_passes_test
 
 from .models import Game, Category, Cart, Order, OrderItem
 
@@ -30,16 +32,22 @@ def register(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save(commit=False)  # Сохранение без записи в базу
-            user.first_name = form.cleaned_data['first_name']
-            user.last_name = form.cleaned_data['last_name']
-            user.save()  # Теперь сохраняем полностью
+            user = form.save(commit=False)
+            secret_key = form.cleaned_data.get('secret_key')
+            user.save()
+
+            # Назначение группы "Модератор", если введено секретное слово
+            if secret_key == 'MODERATOR_SECRET':
+                moderator_group, created = Group.objects.get_or_create(name='Модераторы')
+                user.groups.add(moderator_group)
+
+            messages.success(request, "Регистрация прошла успешно.")
             login(request, user)
-            messages.success(request, 'Регистрация прошла успешно!')
-            return redirect('game_list')  # Редирект на главную
+            return redirect('game_list')
     else:
         form = RegistrationForm()
-    return render(request, 'shop/register.html', {"form": form,})
+
+    return render(request, 'shop/register.html', {'form': form})
 
 class CustomLoginView(LoginView):
     template_name = 'shop/login.html'
@@ -86,6 +94,67 @@ def reset_password(request):
         form = PasswordResetForm(user=request.user)
 
     return render(request, 'shop/reset_password.html', {'form': form})
+
+
+def is_moderator(user):
+    return user.groups.filter(name='Модераторы').exists()
+
+def game_list(request):
+    games = Game.objects.all()
+    context = {
+        'games': games,
+        'is_moderator': is_moderator(request.user) if request.user.is_authenticated else False
+    }
+    return render(request, 'shop/game_list.html', context)
+
+# Панель управления
+@login_required
+@user_passes_test(is_moderator)
+def moderator_panel(request):
+    games = Game.objects.all()
+    return render(request, 'shop/moderator_panel.html', {'games': games})
+
+# Добавить игру
+@login_required
+@user_passes_test(is_moderator)
+def add_game(request):
+    if request.method == 'POST':
+        form = GameForm(request.POST, request.FILES)
+        if form.is_valid():
+            game = form.save(commit=False)
+            game.seller = request.user
+            game.save()
+            messages.success(request, "Игра успешно добавлена!")
+            return redirect('moderator_panel')
+    else:
+        form = GameForm()
+    return render(request, 'shop/add_game.html', {'form': form})
+
+# Редактировать игру
+@login_required
+@user_passes_test(is_moderator)
+def edit_game(request, game_id):
+    game = get_object_or_404(Game, id=game_id)
+    if request.method == 'POST':
+        form = GameForm(request.POST, request.FILES, instance=game)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Игра успешно обновлена!")
+            return redirect('moderator_panel')
+    else:
+        form = GameForm(instance=game)
+    return render(request, 'shop/edit_game.html', {'form': form, 'game': game})
+
+# Удалить игру
+@login_required
+@user_passes_test(is_moderator)
+def delete_game(request, game_id):
+    game = get_object_or_404(Game, id=game_id)
+    game.delete()
+    messages.success(request, "Игра успешно удалена!")
+    return redirect('moderator_panel')
+
+
 
 
 

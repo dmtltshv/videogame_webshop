@@ -1,16 +1,31 @@
 from django import forms
-from .models import CustomUser
+from .models import CustomUser, Game
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.hashers import check_password
 
 
 class CustomUserCreationForm(UserCreationForm):
-    first_name = forms.CharField(label="Имя", max_length=30, required=True)
-    last_name = forms.CharField(label="Фамилия", max_length=30, required=True)
+    secret_key = forms.CharField(
+        label="Секретное слово (для модераторов)",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False
+    )
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'avatar', 'first_name', 'last_name']
+        fields = ['username', 'first_name', 'last_name', 'email', 'avatar', 'password1', 'password2', 'secret_key']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'avatar': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+        def clean_secret_key(self):
+            secret_key = self.cleaned_data.get('secret_key')
+            if secret_key and secret_key != 'easy':
+                raise forms.ValidationError("Неверное секретное слово.")
+            return secret_key
 
 def clean(self):
     cleaned_data = super().clean()
@@ -68,3 +83,15 @@ class PasswordResetForm(forms.Form):
             self.add_error('confirm_password', "Пароли не совпадают.")
 
         return cleaned_data
+
+class GameForm(forms.ModelForm):
+    class Meta:
+        model = Game
+        fields = ['title', 'description', 'price', 'category', 'image']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'image': forms.FileInput(attrs={'class': 'form-control'}),
+        }
