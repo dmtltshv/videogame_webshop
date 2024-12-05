@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,33 +17,54 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'game_list' %}">Games</a>
-                    </li>
-                    <li class="nav-item">
-                            <a class="nav-link" href="{% url 'profile' %}">Profile</a>
-                        </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cart' %}">
-                            <i class="bi bi-cart"></i> Cart
+                        <a class="nav-link" href="{% url 'game_list' %}">
+                            Games
                         </a>
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                        <a class="nav-link" href="{% url 'cart' %}">
+                             Корзина
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                     <a class="nav-link" href="{% url 'profile' %}">
+                         Профиль
+                     </a>
+                    </li>
+                    <li class="nav-item">
+                         <form method="POST" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn">
+                                Выйти
+                            </button>
+                        </form>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        <a class="nav-link" href="{% url 'login' %}">
+                            Войти
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                        <a class="nav-link" href="{% url 'register' %}">
+                            Регистрация
+                        </a>
                     </li>
-                    {% endif %}
+                 {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
-
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     {% block content %}
     {% endblock %}
 

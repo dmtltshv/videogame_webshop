@@ -1,12 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Register{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <h2>Register</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Register</button>
-    </form>
+<div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
+    <div class="card p-4" style="width: 100%; max-width: 600px;">
+        <h2 class="text-center mb-4">Регистрация</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary w-100 mt-3">Зарегистрироваться</button>
+        </form>
+    </div>
 </div>
 {% endblock %}

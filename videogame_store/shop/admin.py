@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Game, Category
+from .models import Order
 
-admin.site.register(Category)
-admin.site.register(Game)
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    pass

@@ -1,15 +1,15 @@
-from django.shortcuts import render
-from .models import Game, Category
-from django.shortcuts import redirect
-from .models import Cart
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login
+from django.contrib.auth import logout
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.forms import UserCreationForm
+from .forms import CustomUserCreationForm as RegistrationForm
 from django.contrib.auth.decorators import login_required
-from .models import Order, OrderItem
-from django.shortcuts import get_object_or_404
-from .forms import SellerRegistrationForm
-from .forms import ReviewForm
-from .models import SellerProfile, Review
+from django.urls import reverse_lazy
+from django.contrib import messages
+
+
+from .models import Game, Category, Cart, Order, OrderItem
 
 def game_list(request):
     category_id = request.GET.get('category')
@@ -23,6 +23,44 @@ def game_list(request):
 
     categories = Category.objects.all()
     return render(request, 'shop/game_list.html', {'games': games, 'categories': categories})
+
+def register(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = form.save(commit=False)  # Сохранение без записи в базу
+            user.first_name = form.cleaned_data['first_name']
+            user.last_name = form.cleaned_data['last_name']
+            user.save()  # Теперь сохраняем полностью
+            login(request, user)
+            messages.success(request, 'Регистрация прошла успешно!')
+            return redirect('game_list')  # Редирект на главную
+    else:
+        form = RegistrationForm()
+    return render(request, 'shop/register.html', {"form": form,})
+
+class CustomLoginView(LoginView):
+    template_name = 'shop/login.html'
+    redirect_authenticated_user = True
+    success_url = reverse_lazy('game_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Вы успешно вошли в аккаунт!')
+        return super().form_valid(form)
+
+def logout_view(request):
+    logout(request)
+    return redirect('game_list')  # Перенаправление после выхода
+
+@login_required
+def profile(request):
+    return render(request, 'shop/profile.html')
+
+
+
+
+
+
 
 def add_to_cart(request, game_id):
     if request.user.is_authenticated:
@@ -47,19 +85,10 @@ def remove_from_cart(request, cart_item_id):
     Cart.objects.filter(id=cart_item_id, user=request.user).delete()
     return redirect('cart')
 
-def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('login')
-    else:
-        form = UserCreationForm()
-    return render(request, 'shop/register.html', {'form': form})
 
-@login_required
-def profile(request):
-    return render(request, 'shop/profile.html')
+
+
+
 
 def place_order(request):
     if request.user.is_authenticated:
@@ -91,57 +120,4 @@ def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, 'shop/order_detail.html', {'order': order})
 
-@login_required
-def register_seller(request):
-    if request.method == 'POST':
-        form = SellerRegistrationForm(request.POST)
-        if form.is_valid():
-            seller_profile = form.save(commit=False)
-            seller_profile.user = request.user
-            seller_profile.save()
-            return redirect('seller_dashboard')
-    else:
-        form = SellerRegistrationForm()
-    return render(request, 'shop/register_seller.html', {'form': form})
 
-@login_required
-def seller_dashboard(request):
-    if not hasattr(request.user, 'seller_profile') or not request.user.seller_profile.is_active:
-        return redirect('register_seller')  # Перенаправляем на регистрацию
-
-    games = Game.objects.filter(seller=request.user)
-    orders = OrderItem.objects.filter(game__in=games)
-
-    return render(request, 'shop/seller_dashboard.html', {
-        'games': games,
-        'orders': orders,
-    })
-
-@login_required
-def add_review(request, store_id):
-    store = get_object_or_404(SellerProfile, id=store_id, is_active=True)
-    if request.method == 'POST':
-        form = ReviewForm(request.POST)
-        if form.is_valid():
-            review = form.save(commit=False)
-            review.seller = store
-            review.user = request.user
-            review.save()
-            return redirect('store_detail', store_id=store.id)
-    else:
-        form = ReviewForm()
-    return render(request, 'shop/add_review.html', {'form': form, 'store': store})
-
-def store_list(request):
-    # Получаем минимальный рейтинг из GET-запроса
-    min_rating = request.GET.get('min_rating', 0)
-
-    # Фильтруем магазины по рейтингу
-    stores = SellerProfile.objects.filter(is_active=True)
-    filtered_stores = [store for store in stores if store.average_rating() >= float(min_rating)]
-
-    # Передаем минимальный рейтинг в контекст
-    return render(request, 'shop/store_list.html', {
-        'stores': filtered_stores,
-        'min_rating': min_rating,
-    })
