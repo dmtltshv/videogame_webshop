@@ -2,27 +2,40 @@
 {% block title %}My Account{% endblock %}
 {% block content %}
 <div class="container mt-5">
-    <h2>Welcome, {{ user.username }}!</h2>
+    <h2>Добро пожаловать, {{ user.username }}!</h2>
+    {% if user.avatar %}
+        <img src="{{ user.avatar.url }}" alt="Avatar" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px;">
+    {% else %}
+        <img src="/media/avatars/default.png" alt="Default Avatar" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px;">
+    {% endif %}
     <p>Email: {{ user.email }}</p>
-    <p>Join date: {{ user.date_joined|date:"d M Y" }}</p>
+    <p>Дата регистрации: {{ user.date_joined|date:"d M Y" }}</p>
 
-    <h3 class="mt-4">Your Orders</h3>
+    <h3 class="mt-4">
+        Ваши заказы
+    </h3>
       <ul>
           {% for order in orders %}
-          <li>Order #{{ order.id }}: {{ order.game.title }} - ${{ order.game.price }} ({{ order.date_ordered|date:"d M Y" }})</li>
+          <li>
+              Order #{{ order.id }}: {{ order.game.title }} - ${{ order.game.price }} ({{ order.date_ordered|date:"d M Y" }})
+          </li>
           {% empty %}
-          <li>You have no orders yet.</li>
+          <li>
+              У Вас нет заказов :(
+          </li>
           {% endfor %}
       </ul>
-    <h3 class="mt-4">Your Orders</h3>
+    <h3 class="mt-4">
+        Ваши заказы
+    </h3>
     <table class="table table-bordered">
         <thead>
             <tr>
-                <th>Order ID</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Details</th>
+                <th>ID Заказа</th>
+                <th>Дата</th>
+                <th>Статус</th>
+                <th>Цена</th>
+                <th>Детали</th>
             </tr>
         </thead>
         <tbody>
@@ -33,15 +46,22 @@
                 <td>{{ order.created_at|date:"d M Y H:i" }}</td>
                 <td>{{ order.status }}</td>
                 <td>${{ order.items.all|summa:"price" }}</td>
-                <td><a href="{% url 'order_detail' order.id %}" class="btn btn-info btn-sm">View</a></td>
+                <td><a href="{% url 'order_detail' order.id %}" class="btn btn-info btn-sm">Просмотреть</a></td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" class="text-center">You have no orders.</td>
+                <td colspan="5" class="text-center">Вы не имеете заказов</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <a href="#" class="btn btn-secondary mt-3">Update Profile</a>
+    <div class="text-center mt-4">
+        <a href="{% url 'profile_edit' %}" class="btn btn-warning">
+            Изменить профиль
+        </a>
+        <a href="{% url 'reset_password' %}" class="btn btn-danger">
+        Сменить пароль
+        </a>
+    </div>
 </div>
 {% endblock %}

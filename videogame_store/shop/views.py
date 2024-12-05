@@ -7,7 +7,9 @@ from .forms import CustomUserCreationForm as RegistrationForm
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib import messages
-
+from .forms import ProfileUpdateForm, PasswordResetForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
 
 from .models import Game, Category, Cart, Order, OrderItem
 
@@ -56,8 +58,34 @@ def logout_view(request):
 def profile(request):
     return render(request, 'shop/profile.html')
 
+@login_required
+def profile_edit(request):
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Ваш профиль был успешно обновлён.')
+            return redirect('profile')
+    else:
+        form = ProfileUpdateForm(instance=request.user)
 
+    return render(request, 'shop/profile_edit.html', {'form': form})
 
+@login_required
+def reset_password(request):
+    if request.method == 'POST':
+        form = PasswordResetForm(request.POST, user=request.user)
+        if form.is_valid():
+            new_password = form.cleaned_data['new_password']
+            # Устанавливаем новый пароль
+            request.user.password = make_password(new_password)
+            request.user.save()
+            messages.success(request, "Пароль успешно изменён.")
+            return redirect('game_list')
+    else:
+        form = PasswordResetForm(user=request.user)
+
+    return render(request, 'shop/reset_password.html', {'form': form})
 
 
 

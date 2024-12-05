@@ -4,7 +4,7 @@ from django.conf import settings
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, default='avatars/default.png')
 
 
 class Category(models.Model):
