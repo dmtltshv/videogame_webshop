@@ -86,9 +86,9 @@ AUTH_USER_MODEL = 'shop.CustomUser'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'your_database_name',
-        'USER': 'your_username',
-        'PASSWORD': 'your_password',
+        'NAME': 'web_shop',
+        'USER': 'postgres',
+        'PASSWORD': '3270',
         'HOST': 'localhost',
         'PORT': '5432',
     }
