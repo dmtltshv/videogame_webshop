@@ -87,7 +87,8 @@ class PasswordResetForm(forms.Form):
 class GameForm(forms.ModelForm):
     class Meta:
         model = Game
-        fields = ['title', 'description', 'price', 'category', 'image']
+        fields = ['title', 'description', 'price', 'category', 'image', 'release_date']
+        release_date = forms.DateField(widget=forms.TextInput(attrs={'type': 'date'}))
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
@@ -95,3 +96,27 @@ class GameForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+class GameFilterForm(forms.Form):
+    search = forms.CharField(
+        required=False,
+        label="Поиск по названию",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введите название...'})
+    )
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.all(),
+        required=False,
+        label="Категория",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    sort_by = forms.ChoiceField(
+        required=False,
+        label="Сортировать по",
+        choices=[
+            ('price_asc', 'Цена (возрастание)'),
+            ('price_desc', 'Цена (убывание)'),
+            ('title_asc', 'Название (А-Я)'),
+            ('title_desc', 'Название (Я-А)'),
+        ],
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )

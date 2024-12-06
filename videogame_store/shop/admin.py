@@ -1,11 +1,21 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth import get_user_model
 from .models import Order, Game
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     pass
+
+# Получите модель пользователя (пользовательская модель, если вы её настроили)
+User = get_user_model()
+
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active')
+    search_fields = ('username', 'email')
+    list_filter = ('is_staff', 'is_active')
 
 def setup_moderator_group():
     moderator_group, created = Group.objects.get_or_create(name='Модераторы')
@@ -16,6 +26,7 @@ def setup_moderator_group():
         'add_game', 'change_game', 'delete_game'
     ])
     moderator_group.permissions.set(permissions)
+
 
 setup_moderator_group()
 

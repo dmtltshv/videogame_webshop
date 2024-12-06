@@ -21,11 +21,26 @@
                             Games
                         </a>
                     </li>
+
                     {% if is_moderator %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'moderator_panel' %}">Панель управления</a>
+                            <a class="nav-link" href="{% url 'moderator_panel' %}">
+                                Панель управления
+                            </a>
+                            <a href="{% url 'moderator_orders' %}">
+                                Управление заказами
+                            </a>
                         </li>
                     {% endif %}
+
+                    {% if is_owner %}
+                        <li class="nav-item">
+                            <a href="{% url 'owner_dashboard' %}">
+                                Панель владельца
+                            </a>
+                        </li>
+                    {% endif %}
+
                     {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'cart' %}">

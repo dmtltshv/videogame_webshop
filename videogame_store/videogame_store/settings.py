@@ -32,8 +32,8 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
+    'django.contrib.auth',  # Это приложение важно для создания таблиц auth
+    'django.contrib.contenttypes',  # Это приложение важно для связи с моделями
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',

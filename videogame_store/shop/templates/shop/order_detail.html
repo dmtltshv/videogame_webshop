@@ -9,10 +9,10 @@
     <table class="table table-bordered">
         <thead>
             <tr>
-                <th>Game</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Total</th>
+                <th>Игра</th>
+                <th>Количество</th>
+                <th>Цена</th>
+                <th>Итого</th>
             </tr>
         </thead>
         <tbody>
@@ -28,6 +28,6 @@
         </tbody>
     </table>
     {% load cart_tags %}
-    <h3 class="text-end">Total: ${{ order.items.all|summa:"price" }}</h3>
+    <h3 class="text-end">Итого: {{ order.items.all|summa:"price" }}</h3>
 </div>
 {% endblock %}

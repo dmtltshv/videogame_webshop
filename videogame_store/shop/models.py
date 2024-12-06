@@ -6,7 +6,6 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, default='avatars/default.png')
 
-
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -20,7 +19,7 @@ class Game(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     release_date = models.DateField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='games')
-    image = models.ImageField(upload_to='game_images/', blank=True, null=True)
+    image = models.ImageField(upload_to='game_images/', blank=True, null=True, default='game_images/default.png')
 
     def __str__(self):
         return self.title
@@ -36,8 +35,6 @@ class Cart(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.game.title}"
 
-
-
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
@@ -48,17 +45,18 @@ class Order(models.Model):
 
 class Order(models.Model):
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Completed', 'Completed'),
-        ('Cancelled', 'Cancelled'),
+        ('pending', 'Ожидает обработки'),
+        ('processing', 'В обработке'),
+        ('completed', 'Завершен'),
+        ('cancelled', 'Отменен'),
     ]
-
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
+    game = models.ForeignKey('Game', on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
 
     def __str__(self):
-        return f"Order #{self.id} - {self.user.username} ({self.status})"
+        return f"Заказ #{self.id} - {self.get_status_display()}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -68,3 +66,16 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.game.title} (x{self.quantity})"
+
+class Favorite(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='favorites')
+    game = models.ForeignKey('Game', on_delete=models.CASCADE, related_name='favorited_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'game')  # Чтобы пользователь не мог добавить одну игру несколько раз
+
+    def __str__(self):
+        return f"{self.user.username} добавил {self.game.title} в избранное"
+
+

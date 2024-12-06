@@ -8,42 +8,37 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.contrib import messages
 from .forms import ProfileUpdateForm, PasswordResetForm, GameForm
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import user_passes_test
+from django.http import JsonResponse
 
-from .models import Game, Category, Cart, Order, OrderItem
-
-def game_list(request):
-    category_id = request.GET.get('category')
-    query = request.GET.get('q')
-
-    games = Game.objects.all()
-    if category_id:
-        games = games.filter(category_id=category_id)
-    if query:
-        games = games.filter(title__icontains=query)
-
-    categories = Category.objects.all()
-    return render(request, 'shop/game_list.html', {'games': games, 'categories': categories})
+from .models import Game, Category, Cart, Order, OrderItem, Favorite, GameFilterForm
 
 def register(request):
     if request.method == 'POST':
-        form = RegistrationForm(request.POST, request.FILES)
+        form = RegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            secret_key = form.cleaned_data.get('secret_key')
-            user.save()
+            # Сохраняем пользователя
+            user = form.save()
 
-            # Назначение группы "Модератор", если введено секретное слово
-            if secret_key == 'MODERATOR_SECRET':
-                moderator_group, created = Group.objects.get_or_create(name='Модераторы')
+            # Получаем значение секретного слова из формы
+            secret_word = form.cleaned_data.get('secret_word')
+
+            # Проверяем секретное слово
+            if secret_word == 'MODERATOR_SECRET':
+                moderator_group = Group.objects.get(name='Модератор')
                 user.groups.add(moderator_group)
 
-            messages.success(request, "Регистрация прошла успешно.")
+            if secret_word == "OWNER_SECRET":
+                owner_group = Group.objects.get(name='Владелец')
+                user.groups.add(owner_group)
+
+            # Выполняем вход пользователя
             login(request, user)
-            return redirect('game_list')
+            messages.success(request, "Вы успешно зарегистрированы!")
+            return redirect('shop/game_list')  # Перенаправление на страницу магазина
+
     else:
         form = RegistrationForm()
 
@@ -95,15 +90,43 @@ def reset_password(request):
 
     return render(request, 'shop/reset_password.html', {'form': form})
 
-
 def is_moderator(user):
-    return user.groups.filter(name='Модераторы').exists()
+    # Проверка, является ли пользователь модератором
+    return user.is_authenticated and user.groups.filter(name='Модератор').exists()
+
 
 def game_list(request):
     games = Game.objects.all()
+    form = GameFilterForm(request.GET)
+
+    if form.is_valid():
+        # Фильтрация по названию
+        search_query = form.cleaned_data.get('search')
+        if search_query:
+            games = games.filter(title__icontains=search_query)
+
+        # Фильтрация по категории
+        category = form.cleaned_data.get('category')
+        if category:
+            games = games.filter(category=category)
+
+        # Сортировка
+        sort_by = form.cleaned_data.get('sort_by')
+        if sort_by == 'price_asc':
+            games = games.order_by('price')
+        elif sort_by == 'price_desc':
+            games = games.order_by('-price')
+        elif sort_by == 'title_asc':
+            games = games.order_by('title')
+        elif sort_by == 'title_desc':
+            games = games.order_by('-title')
+
+    is_moderator_status = is_moderator(request.user)
+
     context = {
         'games': games,
-        'is_moderator': is_moderator(request.user) if request.user.is_authenticated else False
+        'form': form,
+        'is_moderator': is_moderator_status,  # Информация о том, является ли пользователь модератором
     }
     return render(request, 'shop/game_list.html', context)
 
@@ -154,11 +177,6 @@ def delete_game(request, game_id):
     messages.success(request, "Игра успешно удалена!")
     return redirect('moderator_panel')
 
-
-
-
-
-
 def add_to_cart(request, game_id):
     if request.user.is_authenticated:
         game = Game.objects.get(id=game_id)
@@ -182,11 +200,6 @@ def remove_from_cart(request, cart_item_id):
     Cart.objects.filter(id=cart_item_id, user=request.user).delete()
     return redirect('cart')
 
-
-
-
-
-
 def place_order(request):
     if request.user.is_authenticated:
         cart_items = Cart.objects.filter(user=request.user)
@@ -208,6 +221,23 @@ def place_order(request):
     return redirect('login')
 
 @login_required
+@user_passes_test(is_moderator)
+def moderator_orders(request):
+    orders = Order.objects.all().order_by('-created_at')  # Все заказы, отсортированные по дате
+    return render(request, 'shop/moderator_orders.html', {'orders': orders})
+
+@login_required
+@user_passes_test(is_moderator)
+def update_order_status(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in dict(Order.STATUS_CHOICES):  # Проверка, что статус корректный
+            order.status = new_status
+            order.save()
+    return redirect('moderator_orders')
+
+@login_required
 def profile(request):
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'shop/profile.html', {'orders': orders})
@@ -217,4 +247,32 @@ def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, 'shop/order_detail.html', {'order': order})
 
+@login_required
+def add_to_favorites(request, game_id):
+    game = get_object_or_404(Game, id=game_id)
+    Favorite.objects.get_or_create(user=request.user, game=game)
+    return redirect('game_list')  # Замените на имя вашей страницы игр
 
+@login_required
+def remove_from_favorites(request, game_id):
+    game = get_object_or_404(Game, id=game_id)
+    Favorite.objects.filter(user=request.user, game=game).delete()
+    return redirect('game_list')  # Замените на имя вашей страницы игр
+
+def is_owner(user):
+    return user.groups.filter(name='Владелец').exists()
+
+@login_required
+@user_passes_test(is_owner)
+def owner_dashboard(request):
+    # Примерные данные для статистики
+    user_count = CustomUser.objects.count()
+    total_profit = Order.objects.aggregate(total=Sum('total_price'))['total'] or 0
+    balance_profit = total_profit * 0.8  # Пример чистой прибыли (80%)
+
+    context = {
+        'user_count': user_count,
+        'total_profit': total_profit,
+        'balance_profit': balance_profit,
+    }
+    return render(request, 'shop/owner_dashboard.html', context)

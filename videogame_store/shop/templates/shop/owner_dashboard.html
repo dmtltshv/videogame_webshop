@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Панель владельца</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Статистика</h5>
+        <p class="card-text">Общее количество пользователей: {{ user_count }}</p>
+        <p class="card-text">Общая прибыль: {{ total_profit }} ₽</p>
+        <p class="card-text">Чистая прибыль: {{ balance_profit }} ₽</p>
+    </div>
+</div>
+{% endblock %}
