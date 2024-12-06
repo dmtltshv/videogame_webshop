@@ -36,14 +36,6 @@ class Cart(models.Model):
         return f"{self.user.username} - {self.game.title}"
 
 class Order(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    game = models.ForeignKey(Game, on_delete=models.CASCADE)
-    date_ordered = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Order #{self.id} by {self.user.username}"
-
-class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Ожидает обработки'),
         ('processing', 'В обработке'),
@@ -54,6 +46,7 @@ class Order(models.Model):
     game = models.ForeignKey('Game', on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"Заказ #{self.id} - {self.get_status_display()}"
@@ -73,7 +66,9 @@ class Favorite(models.Model):
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'game')  # Чтобы пользователь не мог добавить одну игру несколько раз
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'game'], name='unique_favorite')
+        ]
 
     def __str__(self):
         return f"{self.user.username} добавил {self.game.title} в избранное"

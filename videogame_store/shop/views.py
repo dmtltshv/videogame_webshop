@@ -12,6 +12,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import user_passes_test
 from django.http import JsonResponse
+from django.db.models import Sum
 
 from .models import Game, Category, Cart, Order, OrderItem, Favorite, GameFilterForm
 
@@ -19,25 +20,19 @@ def register(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            # Сохраняем пользователя
             user = form.save()
 
-            # Получаем значение секретного слова из формы
             secret_word = form.cleaned_data.get('secret_word')
-
-            # Проверяем секретное слово
             if secret_word == 'MODERATOR_SECRET':
-                moderator_group = Group.objects.get(name='Модератор')
+                moderator_group, _ = Group.objects.get_or_create(name='Модератор')
                 user.groups.add(moderator_group)
-
-            if secret_word == "OWNER_SECRET":
-                owner_group = Group.objects.get(name='Владелец')
+            elif secret_word == 'OWNER_SECRET':
+                owner_group, _ = Group.objects.get_or_create(name='Владелец')
                 user.groups.add(owner_group)
 
-            # Выполняем вход пользователя
             login(request, user)
             messages.success(request, "Вы успешно зарегистрированы!")
-            return redirect('shop/game_list')  # Перенаправление на страницу магазина
+            return redirect('shop/game_list')
 
     else:
         form = RegistrationForm()
@@ -59,7 +54,8 @@ def logout_view(request):
 
 @login_required
 def profile(request):
-    return render(request, 'shop/profile.html')
+    orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'shop/profile.html', {'orders': orders})
 
 @login_required
 def profile_edit(request):
@@ -145,7 +141,6 @@ def add_game(request):
         form = GameForm(request.POST, request.FILES)
         if form.is_valid():
             game = form.save(commit=False)
-            game.seller = request.user
             game.save()
             messages.success(request, "Игра успешно добавлена!")
             return redirect('moderator_panel')
@@ -179,14 +174,13 @@ def delete_game(request, game_id):
 
 def add_to_cart(request, game_id):
     if request.user.is_authenticated:
-        game = Game.objects.get(id=game_id)
+        game = get_object_or_404(Game, id=game_id)
         cart_item, created = Cart.objects.get_or_create(user=request.user, game=game)
         if not created:
             cart_item.quantity += 1
         cart_item.save()
         return redirect('cart')
-    else:
-        return redirect('login')
+    return redirect('login')
 
 def view_cart(request):
     if request.user.is_authenticated:
@@ -204,18 +198,23 @@ def place_order(request):
     if request.user.is_authenticated:
         cart_items = Cart.objects.filter(user=request.user)
         if not cart_items:
-            return redirect('cart')  # Если корзина пуста, возвращаем на страницу корзины
+            return redirect('cart')
 
-        # Создаем заказ
         order = Order.objects.create(user=request.user)
+        total_price = 0
+
         for item in cart_items:
+            total_price += item.quantity * item.game.price
             OrderItem.objects.create(
                 order=order,
                 game=item.game,
                 quantity=item.quantity,
                 price=item.game.price
             )
-            item.delete()  # Удаляем элемент из корзины после переноса в заказ
+            item.delete()
+
+        order.total_price = total_price
+        order.save()
         return redirect('order_detail', order_id=order.id)
 
     return redirect('login')
@@ -238,11 +237,6 @@ def update_order_status(request, order_id):
     return redirect('moderator_orders')
 
 @login_required
-def profile(request):
-    orders = Order.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'shop/profile.html', {'orders': orders})
-
-@login_required
 def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     return render(request, 'shop/order_detail.html', {'order': order})
@@ -257,7 +251,7 @@ def add_to_favorites(request, game_id):
 def remove_from_favorites(request, game_id):
     game = get_object_or_404(Game, id=game_id)
     Favorite.objects.filter(user=request.user, game=game).delete()
-    return redirect('game_list')  # Замените на имя вашей страницы игр
+    return redirect('game_list')
 
 def is_owner(user):
     return user.groups.filter(name='Владелец').exists()

@@ -4,14 +4,12 @@ from shop import views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from shop.views import CustomLoginView
-from .views import owner_dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.game_list, name='game_list'),
     path('cart/', views.view_cart, name='cart'),
-    path('login/', CustomLoginView.as_view(), name='login'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register, name='register'),
     path('profile/', views.profile, name='profile'),
@@ -29,7 +27,7 @@ urlpatterns = [
     path('moderator-orders/', views.moderator_orders, name='moderator_orders'),
     path('update-order/<int:order_id>/', views.update_order_status, name='update_order_status'),
     path('order/<int:order_id>/', views.order_detail, name='order_detail'),
-    path('owner-dashboard/', owner_dashboard, name='owner_dashboard'),
+    path('owner-dashboard/', views.owner_dashboard, name='owner_dashboard'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
