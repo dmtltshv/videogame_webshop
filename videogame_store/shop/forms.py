@@ -1,8 +1,7 @@
 from django import forms
-from .models import CustomUser, Game
+from .models import CustomUser, Game, Category
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.hashers import check_password
-
 
 class CustomUserCreationForm(UserCreationForm):
     secret_key = forms.CharField(

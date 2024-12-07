@@ -6,4 +6,3 @@ class ShopConfig(AppConfig):
 
     def ready(self):
         import shop.signals  # Убедитесь, что сигнал подключен
-
