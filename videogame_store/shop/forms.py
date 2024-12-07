@@ -106,7 +106,8 @@ class GameFilterForm(forms.Form):
         queryset=Category.objects.all(),
         required=False,
         label="Категория",
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label = "Выберите категорию...",
     )
     sort_by = forms.ChoiceField(
         required=False,

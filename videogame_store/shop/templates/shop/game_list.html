@@ -31,17 +31,21 @@
             <div class="card mb-4 shadow-sm">
                 <div class="card-body">
                     <h5 class="card-title">{{ game.title }}</h5>
-                    {% if game in user.favorites.values_list('game', flat=True) %}
-                    <form method="post" action="{% url 'remove_from_favorites' game.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-secondary">Удалить из избранного</button>
-                    </form>
-                     {% else %}
-                    <form method="post" action="{% url 'add_to_favorites' game.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-primary">Добавить в избранное</button>
-                    </form>
-                     {% endif %}
+                    {% if user.is_authenticated %}
+                        {% if game in favorite_games %}
+                            <form method="post" action="{% url 'remove_from_favorites' game.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-secondary">Удалить из избранного</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'add_to_favorites' game.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">Добавить в избранное</button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <p>Пожалуйста, войдите, чтобы увидеть ваши избранные игры.</p>
+                    {% endif %}
                     <img src="{{ game.image.url }}" class="card-img-top" alt="{{ game.title }}" style="  width: 100%;
                         height: 200px;
                         object-fit: cover;

@@ -90,7 +90,19 @@ def is_moderator(user):
 def game_list(request):
     games = Game.objects.all()
     form = GameFilterForm(request.GET)
+    user = request.user
 
+    context = {}
+
+    # Обработка избранных игр для авторизованных пользователей
+    if user.is_authenticated:
+        # Получаем избранные игры для авторизованного пользователя
+        favorite_games = user.favorites.all()  # или user.favorites.values_list('game', flat=True)
+        context['favorite_games'] = favorite_games
+    else:
+        context['favorite_games'] = []  # Если пользователь не авторизован, передаем пустой список
+
+    # Обработка фильтров
     if form.is_valid():
         # Фильтрация по названию
         search_query = form.cleaned_data.get('search')
@@ -113,13 +125,16 @@ def game_list(request):
         elif sort_by == 'title_desc':
             games = games.order_by('-title')
 
+    # Проверка статуса модератора
     is_moderator_status = is_moderator(request.user)
 
-    context = {
+    # Передаем все данные в контекст
+    context.update({
         'games': games,
         'form': form,
         'is_moderator': is_moderator_status,  # Информация о том, является ли пользователь модератором
-    }
+    })
+
     return render(request, 'shop/game_list.html', context)
 
 # Панель управления
