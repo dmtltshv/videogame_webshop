@@ -7,7 +7,13 @@
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="btn btn-primary w-100 mt-3">Зарегистрироваться</button>
+            {% if form.is_moderator.value or form.is_owner.value %}
+                <div class="form-group">
+                    <label for="id_secret_key">Секретное слово</label>
+                    {{ form.secret_key }}
+                </div>
+            {% endif %}
+            <button type="submit" class="btn btn-dark w-100 mt-3">Зарегистрироваться</button>
         </form>
     </div>
 </div>

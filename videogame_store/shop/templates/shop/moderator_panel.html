@@ -2,7 +2,15 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2 class="text-center">Панель управления</h2>
+    <h2 class="text-center">Управление играми</h2>
+    <!-- Форма поиска -->
+    <form method="get" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="search" class="form-control" placeholder="Поиск игр..."
+                   value="{{ search_query }}">
+            <button class="btn btn-dark" type="submit">Искать</button>
+        </div>
+    </form>
     <a href="{% url 'add_game' %}" class="btn btn-success mb-3">Добавить игру</a>
     <table class="table table-bordered">
         <thead>
@@ -15,13 +23,18 @@
         </thead>
         <tbody>
             {% for game in games %}
-            <tr>
-                <td>{{ game.title }}</td>
-                <td>${{ game.price }}</td>
+            <tr class="{% if search_query and search_query|lower in game.title|lower %}table-success{% endif %}">
+                <td>
+                    {{ game.title }}
+                    {% if search_query and search_query|lower in game.title|lower %}
+                    {% endif %}
+                </td>
+                <td>₽{{ game.price }}</td>
                 <td>{{ game.category }}</td>
                 <td>
-                    <a href="{% url 'edit_game' game.id %}" class="btn btn-warning btn-sm">Редактировать</a>
-                    <a href="{% url 'delete_game' game.id %}" class="btn btn-danger btn-sm">Удалить</a>
+                    <a href="{% url 'edit_game' game.id %}" class="btn btn-dark btn-sm">Редактировать</a>
+                    <a href="{% url 'delete_game' game.id %}" class="btn btn-danger btn-sm"
+                    onclick="return confirm('Вы уверены, что хотите удалить эту игру?');">Удалить</a>
                 </td>
             </tr>
             {% endfor %}

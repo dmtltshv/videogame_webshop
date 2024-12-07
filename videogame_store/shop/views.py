@@ -10,25 +10,38 @@ from django.urls import reverse_lazy
 from .forms import CustomUserCreationForm as RegistrationForm
 from .forms import ProfileUpdateForm, PasswordResetForm, GameForm, GameFilterForm
 from django.db.models import Sum
+from django.contrib.auth import get_user_model
 from .models import Game, Category, Cart, Order, OrderItem, Favorite
+from django.db.models import Q
+from decimal import Decimal
+
+
+User = get_user_model()
 
 def register(request):
     if request.method == 'POST':
-        form = RegistrationForm(request.POST)
+        form = RegistrationForm(request.POST, request.FILES)
         if form.is_valid():
+            if 'avatar' in request.FILES:
+                user.avatar = request.FILES['avatar']
             user = form.save()
+            user.save()
 
-            secret_word = form.cleaned_data.get('secret_word')
-            if secret_word == 'MODERATOR_SECRET':
+            # Получаем выбранную роль и проверяем секретное слово
+            is_moderator = form.cleaned_data.get('is_moderator')
+            is_owner = form.cleaned_data.get('is_owner')
+            secret_key = form.cleaned_data.get('secret_key')
+
+            if is_moderator and secret_key == 'MODERATOR_SECRET':
                 moderator_group, _ = Group.objects.get_or_create(name='Модератор')
                 user.groups.add(moderator_group)
-            elif secret_word == 'OWNER_SECRET':
+            elif is_owner and secret_key == 'OWNER_SECRET':
                 owner_group, _ = Group.objects.get_or_create(name='Владелец')
                 user.groups.add(owner_group)
 
             login(request, user)
             messages.success(request, "Вы успешно зарегистрированы!")
-            return redirect('shop/game_list')
+            return redirect('game_list')
 
     else:
         form = RegistrationForm()
@@ -51,7 +64,14 @@ def logout_view(request):
 @login_required
 def profile(request):
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'shop/profile.html', {'orders': orders})
+    # Получаем избранные игры пользователя
+    favorite_games = request.user.favorites.all()
+
+    context = {
+        'favorite_games': favorite_games,
+        'orders': orders,
+    }
+    return render(request, 'shop/profile.html', context)
 
 @login_required
 def profile_edit(request):
@@ -86,6 +106,9 @@ def is_moderator(user):
     # Проверка, является ли пользователь модератором
     return user.is_authenticated and user.groups.filter(name='Модератор').exists()
 
+def is_owner(user):
+    return user.is_authenticated and user.groups.filter(name='Владелец').exists()
+
 
 def game_list(request):
     games = Game.objects.all()
@@ -96,11 +119,11 @@ def game_list(request):
 
     # Обработка избранных игр для авторизованных пользователей
     if user.is_authenticated:
-        # Получаем избранные игры для авторизованного пользователя
-        favorite_games = user.favorites.all()  # или user.favorites.values_list('game', flat=True)
-        context['favorite_games'] = favorite_games
+        # Получаем список id избранных игр для пользователя
+        favorite_game_ids = user.favorites.values_list('game_id', flat=True)  # Получаем только ids
+        context['favorite_game_ids'] = favorite_game_ids
     else:
-        context['favorite_games'] = []  # Если пользователь не авторизован, передаем пустой список
+        context['favorite_game_ids'] = []  # Если пользователь не авторизован, передаем пустой список
 
     # Обработка фильтров
     if form.is_valid():
@@ -127,23 +150,33 @@ def game_list(request):
 
     # Проверка статуса модератора
     is_moderator_status = is_moderator(request.user)
+    is_owner_status = is_owner(request.user)
 
     # Передаем все данные в контекст
     context.update({
         'games': games,
         'form': form,
-        'is_moderator': is_moderator_status,  # Информация о том, является ли пользователь модератором
+        'is_moderator': is_moderator_status,
+        'is_owner': is_owner_status,  # Информация о том, является ли пользователь модератором
     })
 
     return render(request, 'shop/game_list.html', context)
 
-# Панель управления
 @login_required
 @user_passes_test(is_moderator)
 def moderator_panel(request):
+    search_query = request.GET.get('search', '').strip()  # Получаем строку поиска из GET-запроса
     games = Game.objects.all()
-    return render(request, 'shop/moderator_panel.html', {'games': games})
 
+    if search_query:  # Если введен поисковый запрос
+        games = games.filter(
+            Q(title__icontains=search_query) | Q(description__icontains=search_query)
+        )
+
+    return render(request, 'shop/moderator_panel.html', {
+        'games': games,
+        'search_query': search_query,  # Передаем запрос для отображения
+    })
 # Добавить игру
 @login_required
 @user_passes_test(is_moderator)
@@ -253,27 +286,28 @@ def order_detail(request, order_id):
     return render(request, 'shop/order_detail.html', {'order': order})
 
 @login_required
-def add_to_favorites(request, game_id):
+def toggle_favorite(request, game_id):
     game = get_object_or_404(Game, id=game_id)
-    Favorite.objects.get_or_create(user=request.user, game=game)
-    return redirect('game_list')  # Замените на имя вашей страницы игр
 
-@login_required
-def remove_from_favorites(request, game_id):
-    game = get_object_or_404(Game, id=game_id)
-    Favorite.objects.filter(user=request.user, game=game).delete()
-    return redirect('game_list')
+    # Проверяем, есть ли игра в избранном у пользователя
+    favorite = Favorite.objects.filter(user=request.user, game=game)
 
-def is_owner(user):
-    return user.groups.filter(name='Владелец').exists()
+    if favorite.exists():
+        # Если игра уже в избранном, удаляем её
+        favorite.delete()
+    else:
+        # Если игры нет в избранном, добавляем её
+        Favorite.objects.create(user=request.user, game=game)
+
+    return redirect('game_list')  # Перенаправление на страницу списка игр
 
 @login_required
 @user_passes_test(is_owner)
 def owner_dashboard(request):
     # Примерные данные для статистики
-    user_count = CustomUser.objects.count()
-    total_profit = Order.objects.aggregate(total=Sum('total_price'))['total'] or 0
-    balance_profit = total_profit * 0.8  # Пример чистой прибыли (80%)
+    user_count = User.objects.count()
+    total_profit = Order.objects.aggregate(total=Sum('total_price'))['total'] or Decimal('0')
+    balance_profit = total_profit * Decimal('0.8')  # Пример чистой прибыли (80%)
 
     context = {
         'user_count': user_count,

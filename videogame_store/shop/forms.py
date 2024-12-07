@@ -5,14 +5,24 @@ from django.contrib.auth.hashers import check_password
 
 class CustomUserCreationForm(UserCreationForm):
     secret_key = forms.CharField(
-        label="Секретное слово (для модераторов)",
+        label="Секретное слово (для модераторов или владельцев)",
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
         required=False
+    )
+    is_moderator = forms.BooleanField(
+        label="Модератор?",
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    is_owner = forms.BooleanField(
+        label="Владелец?",
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'first_name', 'last_name', 'email', 'avatar', 'password1', 'password2', 'secret_key']
+        fields = ['username', 'first_name', 'last_name', 'email', 'avatar', 'password1', 'password2', 'is_moderator', 'is_owner', 'secret_key']
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -20,19 +30,25 @@ class CustomUserCreationForm(UserCreationForm):
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'avatar': forms.FileInput(attrs={'class': 'form-control'}),
         }
-        def clean_secret_key(self):
-            secret_key = self.cleaned_data.get('secret_key')
-            if secret_key and secret_key != 'easy':
-                raise forms.ValidationError("Неверное секретное слово.")
-            return secret_key
 
-def clean(self):
-    cleaned_data = super().clean()
-    password = cleaned_data.get("password")
-    confirm_password = cleaned_data.get("confirm_password")
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password1")
+        confirm_password = cleaned_data.get("password2")
 
-    if password != confirm_password:
-        self.add_error('confirm_password', "Пароли не совпадают")
+        # Проверка совпадения паролей
+        if password != confirm_password:
+            self.add_error('password2', "Пароли не совпадают.")
+
+        # Проверка введенного секретного слова
+        is_moderator = cleaned_data.get('is_moderator')
+        is_owner = cleaned_data.get('is_owner')
+        secret_key = cleaned_data.get('secret_key')
+
+        if (is_moderator and secret_key != 'MODERATOR_SECRET') or (is_owner and secret_key != 'OWNER_SECRET'):
+            if secret_key:
+                self.add_error('secret_key', "Неверное секретное слово.")
+        return cleaned_data
 
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
@@ -84,10 +100,19 @@ class PasswordResetForm(forms.Form):
         return cleaned_data
 
 class GameForm(forms.ModelForm):
+    release_date = forms.DateField(widget=forms.TextInput(attrs={'type': 'date'}), label='Дата выхода')
+
     class Meta:
         model = Game
         fields = ['title', 'description', 'price', 'category', 'image', 'release_date']
-        release_date = forms.DateField(widget=forms.TextInput(attrs={'type': 'date'}))
+        labels = {
+            'title': 'Название',
+            'description': 'Описание',
+            'price': 'Цена',
+            'category': 'Категория',
+            'image': 'Изображение',
+            'release_date': 'Дата выхода',
+        }
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control'}),
